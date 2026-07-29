@@ -44,11 +44,11 @@ input_data_type <- "auto"
 organize_10x_after_failure <- "ask"
 
 # 用户填写的“样本级metadata”文件路径。
-# 本流程统一使用XLSX格式，并且至少包含一列名为sample_id。
+# 文件必须是CSV格式，并且至少包含一列名为sample_id。
 # sample_id需要与本脚本读取后得到的sample_name完全一致。
 # 其他列可以由用户自由增加，例如group、batch、patient、tissue、condition等；
 # 这些列都会自动添加到最终sce@meta.data中。
-metadata_file <- file.path(project_dir, "样本metadata.xlsx")
+metadata_file <- file.path(project_dir, "样本metadata.csv")
 
 # 建立Seurat对象时的最低要求。
 create_min_cells <- 3
@@ -75,7 +75,7 @@ manual_pc_number <- 20
 
 # PC数量梯度。脚本会逐一使用这些PC数量完成邻居图、测试聚类和UMAP并绘图。
 # 超过实际PCA/Harmony维度的数值会自动删除，co1/co2推荐值会自动加入梯度。
-pc_number_list <- seq(10, 30, by = 5)
+pc_number_list <- seq(10, 50, by = 5)
 
 # 比较不同PC数量时暂时固定使用同一个resolution，避免同时改变两个参数。
 pc_test_resolution <- 0.5
@@ -91,7 +91,7 @@ final_pc_number <- NA_integer_
 harmony_group <- "sample_id"
 
 # 聚类时先计算多个分辨率，绘图后再选择其中一个作为正式cluster。
-resolution_list <- seq(0.2, 0.8, by = 0.2)
+resolution_list <- seq(0.1, 1.0, by = 0.1)
 # 默认NA表示等待用户查看resolution比较图后输入；也可以预先填写0.5等候选值。
 final_resolution <- NA_real_
 
@@ -107,3 +107,5 @@ use_parameter_override <- FALSE
 # 修改原始数据、metadata、QC阈值、PCA或聚类参数后，建议先使用"restart"完整重跑。
 # 只是修复包兼容问题、填写metadata、选择PC/resolution或填写注释编号时使用"auto"。
 resume_mode <- "auto"
+
+

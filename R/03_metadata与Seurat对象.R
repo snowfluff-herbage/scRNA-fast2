@@ -10,182 +10,12 @@
 
 # metadata采用“一行代表一个样本”的格式，至少包含sample_id列。例如：
 #
-# | sample_id       | group  | batch  | patient  | tissue |
-# | GSM123_sampleA  | Tumor  | Batch1 | Patient1 | Tumor  |
-# | GSM456_sampleB  | Normal | Batch1 | Patient1 | Normal |
+# sample_id,group,batch,patient,tissue
+# GSM123_sampleA,Tumor,Batch1,Patient1,Tumor
+# GSM456_sampleB,Normal,Batch1,Patient1,Normal
 #
 # sample_id必须与前面得到的sample_name完全一致，包括大小写、下划线和连接符。
 # 后面的group、batch、patient、tissue只是示例；用户可以增加任意样本信息列。
-
-# XLSX不依赖CSV的UTF-8/GBK编码，更适合在Windows Excel中填写中文分组信息。
-# 本流程用openxlsx同时负责生成和读取样本metadata。
-write_sample_metadata <- function(sample_info, metadata_file) {
-  if (!grepl("\\.xlsx$", metadata_file, ignore.case = TRUE)) {
-    stop(
-      "metadata_file必须以.xlsx结尾：", metadata_file,
-      "\n请在config/01_流程参数.R中修正metadata_file。"
-    )
-  }
-
-  metadata_workbook <- openxlsx::createWorkbook()
-  openxlsx::addWorksheet(metadata_workbook, "sample_metadata")
-
-  # 表头加深、冻结首行并添加筛选按钮，方便样本较多时在Excel中填写。
-  metadata_header_style <- openxlsx::createStyle(
-    fontColour = "#FFFFFF",
-    fgFill = "#4472C4",
-    textDecoration = "bold",
-    halign = "center",
-    valign = "center",
-    border = "Bottom"
-  )
-  openxlsx::writeData(
-    metadata_workbook,
-    sheet = "sample_metadata",
-    x = sample_info,
-    startRow = 1,
-    startCol = 1,
-    colNames = TRUE,
-    rowNames = FALSE,
-    withFilter = TRUE,
-    keepNA = FALSE,
-    headerStyle = metadata_header_style
-  )
-  openxlsx::freezePane(
-    metadata_workbook,
-    sheet = "sample_metadata",
-    firstRow = TRUE
-  )
-  openxlsx::setColWidths(
-    metadata_workbook,
-    sheet = "sample_metadata",
-    cols = seq_len(ncol(sample_info)),
-    widths = "auto"
-  )
-
-  # overwrite=TRUE用于metadata缺少样本时，将补齐后的完整模板写回原文件。
-  # 如果文件正被Excel占用，Windows可能拒绝覆盖，此时请关闭Excel后重试。
-  tryCatch(
-    openxlsx::saveWorkbook(
-      metadata_workbook,
-      file = metadata_file,
-      overwrite = TRUE
-    ),
-    error = function(e) {
-      stop(
-        "无法写入metadata XLSX文件：", metadata_file,
-        "\n请确认文件没有被Excel占用。",
-        "\n原始错误：", conditionMessage(e)
-      )
-    }
-  )
-
-  invisible(metadata_file)
-}
-
-read_sample_metadata <- function(metadata_file) {
-  if (!grepl("\\.xlsx$", metadata_file, ignore.case = TRUE)) {
-    stop(
-      "metadata_file必须是.xlsx文件：", metadata_file,
-      "\n本版流程不再把CSV作为样本metadata输入。"
-    )
-  }
-
-  metadata_sheets <- tryCatch(
-    openxlsx::getSheetNames(metadata_file),
-    error = function(e) {
-      stop(
-        "无法打开metadata XLSX文件：", metadata_file,
-        "\n请确认文件已正常保存且没有损坏。",
-        "\n原始错误：", conditionMessage(e)
-      )
-    }
-  )
-
-  if (length(metadata_sheets) == 0) {
-    stop("metadata XLSX中没有可读取的工作表：", metadata_file)
-  }
-
-  # 自动生成的模板使用sample_metadata工作表。
-  # 如果用户对工作表改了名，则读取第一个工作表。
-  metadata_sheet <- if ("sample_metadata" %in% metadata_sheets) {
-    "sample_metadata"
-  } else {
-    metadata_sheets[1]
-  }
-
-  sample_info <- tryCatch(
-    openxlsx::read.xlsx(
-      xlsxFile = metadata_file,
-      sheet = metadata_sheet,
-      colNames = TRUE,
-      rowNames = FALSE,
-      detectDates = FALSE,
-      skipEmptyRows = TRUE,
-      skipEmptyCols = FALSE,
-      check.names = FALSE,
-      na.strings = c("NA", "")
-    ),
-    error = function(e) {
-      stop(
-        "无法读取metadata XLSX工作表“", metadata_sheet, "”。",
-        "\n请确认第一行是列名，且包含sample_id列。",
-        "\n原始错误：", conditionMessage(e)
-      )
-    }
-  )
-
-  # 删除列名两端可能由Excel误输入的空格，但不改动用户的其他列名。
-  colnames(sample_info) <- trimws(colnames(sample_info))
-  if (!"sample_id" %in% colnames(sample_info)) {
-    stop(
-      "metadata XLSX工作表“", metadata_sheet,
-      "”中没有识别到sample_id列：", metadata_file
-    )
-  }
-
-  message("metadata读取成功，工作表：", metadata_sheet)
-  sample_info
-}
-
-add_missing_sample_metadata <- function(sample_info, missing_sample) {
-  if (nrow(sample_info) == 0) {
-    sample_info <- data.frame(sample_id = character(), stringsAsFactors = FALSE)
-  }
-
-  if (!"sample_id" %in% colnames(sample_info)) {
-    stop("用户metadata必须包含名为sample_id的列：", metadata_file)
-  }
-
-  standard_columns <- c("sample_id", "group", "batch", "patient", "tissue")
-  for (current_column in standard_columns) {
-    if (!current_column %in% colnames(sample_info)) {
-      sample_info[[current_column]] <- ""
-    }
-  }
-
-  missing_rows <- as.data.frame(
-    lapply(sample_info, function(x) rep("", length(missing_sample))),
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
-  missing_rows$sample_id <- missing_sample
-
-  if ("group" %in% colnames(missing_rows)) {
-    missing_rows$group <- "Group_to_fill"
-  }
-  if ("batch" %in% colnames(missing_rows)) {
-    missing_rows$batch <- missing_sample
-  }
-  if ("patient" %in% colnames(missing_rows)) {
-    missing_rows$patient <- missing_sample
-  }
-  if ("tissue" %in% colnames(missing_rows)) {
-    missing_rows$tissue <- "Tissue_to_fill"
-  }
-
-  rbind(sample_info, missing_rows)
-}
 
 # 第一次运行且metadata文件不存在时，根据实际识别到的样本名生成模板。
 if (!file.exists(metadata_file)) {
@@ -197,13 +27,17 @@ if (!file.exists(metadata_file)) {
     tissue = rep("Tissue_to_fill", length(sample_name))
   )
 
-  write_sample_metadata(sample_info_template, metadata_file)
+  write.csv(
+    sample_info_template,
+    metadata_file,
+    row.names = FALSE
+  )
 
   message("已经自动生成可填写的样本metadata模板：", metadata_file)
 
   if (interactive()) {
     # 在RStudio/R GUI中运行时，脚本暂停在这里。
-    # 用户打开XLSX，填写并保存后回到R控制台按回车，脚本会在本次运行中继续读取。
+    # 用户打开CSV，填写并保存后回到R控制台按回车，脚本会在本次运行中继续读取。
     readline(paste0(
       "请填写并保存“", metadata_file,
       "”，完成后回到R控制台按回车继续："
@@ -212,7 +46,7 @@ if (!file.exists(metadata_file)) {
     # Rscript或服务器批处理模式无法等待用户现场填写，因此生成模板后安全停止。
     stop(
       "样本metadata模板已经生成：", metadata_file,
-      "。当前为非交互式运行，请填写该XLSX文件后重新运行脚本。"
+      "。当前为非交互式运行，请填写该CSV文件后重新运行脚本。"
     )
   }
 }
@@ -220,44 +54,20 @@ if (!file.exists(metadata_file)) {
 
 # 读取用户填写完成的metadata。
 # 如果模板原本已经存在，也会直接从这里读取，不会再次覆盖用户填写内容。
-repeat {
-  sample_info <- read_sample_metadata(metadata_file)
+sample_info <- read.csv(
+  metadata_file,
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
 
-  if (!"sample_id" %in% colnames(sample_info)) {
-    stop("用户metadata必须包含名为sample_id的列：", metadata_file)
-  }
+if (!"sample_id" %in% colnames(sample_info)) {
+  stop("用户metadata必须包含名为sample_id的列：", metadata_file)
+}
 
-  sample_info$sample_id <- trimws(as.character(sample_info$sample_id))
-  sample_info <- sample_info[nzchar(sample_info$sample_id), , drop = FALSE]
+sample_info$sample_id <- as.character(sample_info$sample_id)
 
-  if (anyDuplicated(sample_info$sample_id)) {
-    stop("用户metadata中的sample_id存在重复值，每个样本只能保留一行。")
-  }
-
-  missing_metadata <- setdiff(sample_name, sample_info$sample_id)
-  if (length(missing_metadata) == 0) {
-    break
-  }
-
-  sample_info <- add_missing_sample_metadata(sample_info, missing_metadata)
-  write_sample_metadata(sample_info, metadata_file)
-
-  message(
-    "metadata中缺少以下样本，已自动补回模板：",
-    paste(missing_metadata, collapse = "、")
-  )
-
-  if (interactive()) {
-    readline(paste0(
-      "请重新打开并填写“", metadata_file,
-      "”中新补回的样本行，保存后回到R控制台按回车继续："
-    ))
-  } else {
-    stop(
-      "metadata中缺少样本，已自动补回模板：", metadata_file,
-      "。当前为非交互式运行，请填写后重新运行脚本。"
-    )
-  }
+if (anyDuplicated(sample_info$sample_id)) {
+  stop("用户metadata中的sample_id存在重复值，每个样本只能保留一行。")
 }
 
 # nCount_RNA和nFeature_RNA由CreateSeuratObject()根据表达矩阵自动计算。
@@ -270,6 +80,15 @@ if (length(protected_metadata) > 0) {
   stop(
     "用户metadata不能包含以下Seurat自动生成的列：",
     paste(protected_metadata, collapse = "、")
+  )
+}
+
+missing_metadata <- setdiff(sample_name, sample_info$sample_id)
+if (length(missing_metadata) > 0) {
+  stop(
+    "以下已读取样本没有在用户metadata中找到：",
+    paste(missing_metadata, collapse = "、"),
+    "。请检查sample_id是否与样本名称完全一致。"
   )
 }
 
@@ -297,10 +116,10 @@ if (any(metadata_text %in% c("Group_to_fill", "Tissue_to_fill"))) {
 }
 
 # 保存本次真正读入并完成样本排序后的metadata，作为分析记录。
-# 这个文件同样使用XLSX，便于直接在Excel中查看。
-write_sample_metadata(
+write.csv(
   sample_info,
-  file.path(result_dir, "本次实际读入的样本metadata.xlsx")
+  file.path(result_dir, "本次实际读入的样本metadata.csv"),
+  row.names = FALSE
 )
 
 
@@ -342,3 +161,7 @@ for (i in seq_along(count_list)) {
 names(scRNAlist) <- sample_name
 rm(count_list)
 scRNAlist
+
+
+
+

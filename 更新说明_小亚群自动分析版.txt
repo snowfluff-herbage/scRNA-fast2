@@ -1,0 +1,20 @@
+本版在原“大亚群自由命名注释与断点续跑版”后新增独立的小亚群分析入口。
+
+新增文件：
+1. 运行_03_小亚群自动分析.R
+2. config/04_小亚群分析参数.R
+3. R/10_小亚群自动分析函数.R
+
+主要功能：
+1. 根据sce$celltype自动切分全部或指定大亚群。
+2. 每个大亚群从RNA counts重建Seurat对象并保留metadata。
+3. 自动NormalizeData、找高变基因、ScaleData和PCA。
+4. 可整体或按大亚群选择Harmony always/auto/none。
+5. 可比较PC、resolution以及Louvain/SLM/Leiden等聚类算法。
+6. 支持recommended、interactive和manual三种正式聚类选择方式。
+7. recommended模式综合轮廓系数、ARI稳定性和小cluster惩罚评分。
+8. 自动保存UMAP、全部marker、显著marker、top marker、DotPlot和热图。
+9. 每个大亚群独立检查点，报错后从失败的大亚群继续。
+10. 把全部小cluster映射回原对象，生成含subcluster和subcluster_label的合并RDS。
+
+注意：自动评分用于计算层面的候选排序，不替代marker和生物学复核。

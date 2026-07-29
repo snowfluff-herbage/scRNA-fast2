@@ -1,10 +1,10 @@
 # ==============================================================================
-# Seurat V5模块化一站式流程——主入口
+# Seurat V5模块化一站式流程——入口1：运行至大亚群注释完成
 # ==============================================================================
 # 使用方法：
 #   1. 修改config/01_流程参数.R中的路径和参数；
 #   2. 在RStudio中打开本文件并点击Source；
-#   3. 各功能模块会按照正确顺序自动运行。
+#   3. 各功能模块会按照正确顺序自动运行，结束于大亚群注释完成。
 #
 # 主脚本只负责加载配置和调度模块，具体分析代码保存在R文件夹中。
 # ==============================================================================
@@ -37,7 +37,7 @@ if (length(command_file) > 0) {
   if (length(source_files) == 0) {
     stop(
       "无法取得入口脚本的位置。请不要选中部分代码逐行运行；",
-      "请在RStudio中打开“运行_01_完整流程.R”并点击Source，",
+      "请在RStudio中打开“运行_01_入口_至大亚群注释.R”并点击Source，",
       "或者使用Rscript运行该文件。"
     )
   }
@@ -267,7 +267,7 @@ if (!pipeline_already_completed && start_index <= length(pipeline_modules)) {
       stop(
         "功能块运行失败：", module_file, "\n",
         "错误信息：", conditionMessage(module_error), "\n\n",
-        "流程状态和上一功能块检查点已经保存。修正问题后重新Source本入口脚本，",
+        "流程状态和上一功能块检查点已经保存。修正问题后重新Source入口1，",
         "程序会自动从该功能块继续，不会重复此前已经完成的步骤。",
         call. = FALSE
       )
@@ -287,5 +287,8 @@ if (!pipeline_already_completed && start_index <= length(pipeline_modules)) {
     current_module = tail(pipeline_modules, 1),
     completed_modules = pipeline_modules
   )
-  message("全部模块已经运行完成。")
+  message(
+    "入口1已经运行完成：大亚群注释对象已保存。\n",
+    "下一步请Source“运行_02_入口_从大亚群注释至小亚群完成.R”。"
+  )
 }

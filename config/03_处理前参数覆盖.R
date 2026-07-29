@@ -26,12 +26,13 @@ if (use_parameter_override) {
   n_pcs_calculate <- 50
   auto_choose_pc <- TRUE
   manual_pc_number <- 20
-  pc_number_list <- seq(10, 30, by = 5)
+  pc_number_list <- seq(10, 50, by = 5)
   pc_test_resolution <- 0.5
   final_pc_number <- NA_integer_
 
   # Harmony和聚类参数。
   harmony_group <- "sample_id"
-  resolution_list <- seq(0.2, 0.8, by = 0.2)
+  resolution_list <- seq(0.1, 1.0, by = 0.1)
   final_resolution <- NA_real_
 }
+

@@ -1,0 +1,19 @@
+本版本把用户提供的6套小亚群先验marker工作簿内置到代码包：
+
+- T_marker_31(1).xlsx
+- B_markers(1).xlsx
+- PC_markers(1).xlsx
+- Mye_markers(1).xlsx
+- Fib_markers(1).xlsx
+- EC_markers.xlsx
+
+主要改动：
+
+1. 原始工作簿保存在data/先验marker原始表，便于追溯。
+2. 运行面板已经静态写入config/05，不依赖运行电脑额外安装Excel读取包。
+3. EC_markers.xlsx正式加入Endothelial面板，并与Fib_markers中的内皮条目合并。
+4. 根据结直肠癌和肿瘤微环境单细胞研究补充高特异性marker。
+5. IGHA3、IGHA4和pDC面板中的IRF4保留在排除审计表，不进入正式点图。
+6. 入口2完成每个大亚群的小亚群聚类后，自动绘制cluster水平先验marker DotPlot。
+7. 断点续跑时，如点图缺失或marker配置更新，只重画点图，不重复小亚群聚类。
+8. 仍保留辅助_小亚群marker点图.R，供用户修改marker后单独重画。

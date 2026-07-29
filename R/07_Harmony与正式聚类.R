@@ -44,22 +44,8 @@ if (resume_from_resolution_checkpoint) {
 
 if (module_resume_enabled && file.exists(pc_selection_checkpoint_file)) {
   saved_pc_selection <- readRDS(pc_selection_checkpoint_file)
-  saved_pc_number <- suppressWarnings(as.integer(saved_pc_selection$final_pc_number))
-
-  # 旧检查点中的PC值必须仍然属于本次已经绘图的候选值。
-  # 如果用户上次误输入了非候选PC，或后来修改了pc_number_list，就忽略旧值并重新选择。
-  if (length(saved_pc_number) == 1L &&
-      !is.na(saved_pc_number) &&
-      saved_pc_number %in% pc_number_candidates) {
-    final_pc_number <- saved_pc_number
-    message("已恢复上次正式选择的PC数量：", final_pc_number)
-  } else {
-    final_pc_number <- NA_integer_
-    unlink(pc_selection_checkpoint_file)
-    message(
-      "上次保存的正式PC数量不是当前候选值，已清除旧PC选择，请重新选择。"
-    )
-  }
+  final_pc_number <- saved_pc_selection$final_pc_number
+  message("已恢复上次正式选择的PC数量：", final_pc_number)
 }
 
 # Harmony根据PCA低维空间校正批次，不会直接改写RNA counts和data。
@@ -213,29 +199,16 @@ saveRDS(
 
 if (is.na(final_pc_number)) {
   if (interactive()) {
-    repeat {
-      pc_answer <- trimws(readline(paste0(
-        "请查看result目录中的PC梯度图，并输入正式PC数量（候选值：",
-        paste(pc_number_candidates, collapse = "、"),
-        "；直接回车使用co1/co2推荐值", recommended_pc_number, "）："
-      )))
+    pc_answer <- trimws(readline(paste0(
+      "请查看result目录中的PC梯度图，并输入正式PC数量（候选值：",
+      paste(pc_number_candidates, collapse = "、"),
+      "；直接回车使用co1/co2推荐值", recommended_pc_number, "）："
+    )))
 
-      if (pc_answer == "") {
-        selected_pc_number <- recommended_pc_number
-      } else {
-        selected_pc_number <- suppressWarnings(as.integer(pc_answer))
-      }
-
-      if (!is.na(selected_pc_number) &&
-          selected_pc_number %in% pc_number_candidates) {
-        final_pc_number <- selected_pc_number
-        break
-      }
-
-      message(
-        "输入的PC数量不是候选值，请重新输入以下候选值之一：",
-        paste(pc_number_candidates, collapse = "、")
-      )
+    if (pc_answer == "") {
+      final_pc_number <- recommended_pc_number
+    } else {
+      final_pc_number <- suppressWarnings(as.integer(pc_answer))
     }
   } else {
     stop(
@@ -247,8 +220,6 @@ if (is.na(final_pc_number)) {
 }
 
 if (is.na(final_pc_number) || !final_pc_number %in% pc_number_candidates) {
-  final_pc_number <- NA_integer_
-  unlink(pc_selection_checkpoint_file)
   stop(
     "final_pc_number必须是本次已经绘图的候选值之一：",
     paste(pc_number_candidates, collapse = "、")
@@ -374,51 +345,14 @@ saveRDS(
 #####正式选择聚类分辨率####
 
 # PC数量确定后，才让用户根据UMAP和clustree选择正式resolution。
-# 交互运行时，如果输入了非候选值、空值或文字，会立即重新询问，
-# 不会让错误值进入断点缓存，也不需要重新Source整个流程。
-resolution_value <- suppressWarnings(as.numeric(final_resolution))
-resolution_match <- integer()
-if (length(resolution_value) == 1L &&
-    !is.na(resolution_value) &&
-    is.finite(resolution_value)) {
-  # 使用数值差值匹配，避免小数在计算机内部的表示误差。
-  resolution_match <- which(
-    abs(resolution_list - resolution_value) < 1e-10
-  )
-}
-resolution_is_valid <- length(resolution_match) == 1L
-
-if (!resolution_is_valid) {
-  # 先清空参数文件或旧错误缓存中的非法值，再进入交互选择。
-  final_resolution <- NA_real_
-
+# 交互运行时可以直接在控制台输入；非交互运行时会生成图片和中间对象后停止。
+if (is.na(final_resolution)) {
   if (interactive()) {
-    repeat {
-      resolution_answer <- trimws(readline(paste0(
-        "请查看不同聚类分辨率_UMAP.pdf和clustree，并输入正式resolution（候选值：",
-        paste(resolution_list, collapse = "、"), "）："
-      )))
-      resolution_value <- suppressWarnings(as.numeric(resolution_answer))
-      resolution_match <- integer()
-
-      if (length(resolution_value) == 1L &&
-          !is.na(resolution_value) &&
-          is.finite(resolution_value)) {
-        resolution_match <- which(
-          abs(resolution_list - resolution_value) < 1e-10
-        )
-      }
-
-      if (length(resolution_match) == 1L) {
-        final_resolution <- resolution_list[resolution_match]
-        break
-      }
-
-      message(
-        "输入的resolution不在候选值中，请重新输入：",
-        paste(resolution_list, collapse = "、")
-      )
-    }
+    resolution_answer <- trimws(readline(paste0(
+      "请查看不同聚类分辨率_UMAP.pdf和clustree，并输入正式resolution（候选值：",
+      paste(resolution_list, collapse = "、"), "）："
+    )))
+    final_resolution <- suppressWarnings(as.numeric(resolution_answer))
   } else {
     stop(
       "resolution梯度图已经生成。当前为非交互式运行，无法等待用户输入。",
@@ -426,10 +360,17 @@ if (!resolution_is_valid) {
       paste(resolution_list, collapse = "、")
     )
   }
-} else {
-  # 对来自参数文件或合法断点缓存的值做标准化。
-  final_resolution <- resolution_list[resolution_match]
 }
+
+# 使用数值差值匹配，避免小数在计算机内部表示造成0.3无法精确匹配的问题。
+resolution_match <- which(abs(resolution_list - final_resolution) < 1e-10)
+if (is.na(final_resolution) || length(resolution_match) != 1) {
+  stop(
+    "final_resolution必须是resolution_list中的候选值之一：",
+    paste(resolution_list, collapse = "、")
+  )
+}
+final_resolution <- resolution_list[resolution_match]
 
 # 保存正式resolution选择，便于错误恢复和结果追溯。
 saveRDS(
@@ -497,4 +438,6 @@ ggsave(
 )
 
 saveRDS(sce, file.path(result_dir, "4.正式聚类后_sce.rds"))
+
+
 

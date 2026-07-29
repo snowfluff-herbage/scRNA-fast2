@@ -111,94 +111,12 @@ write_pipeline_state <- function(
 
 # 报错发生在模块07时，PC或resolution可能已经由用户在控制台选择。
 # 将这些小型参数保存到状态旁边，恢复时重新写回，不必再次询问。
-# 但如果PC或resolution输入本身就是错误原因，
-# 就不能把这个错误值也保存下来，否则断点恢复时会重复注入错误值。
-sanitize_error_parameters <- function(parameter_values, envir = .GlobalEnv) {
-  if ("final_pc_number" %in% names(parameter_values)) {
-    pc_value <- suppressWarnings(as.integer(parameter_values$final_pc_number))
-    pc_has_value <- length(pc_value) == 1L && !is.na(pc_value)
-    pc_is_valid <- pc_has_value
-
-    # 已经完成PC梯度时，正式PC必须来自已经绘图的候选值。
-    if (pc_is_valid && exists("pc_number_candidates", envir = envir, inherits = FALSE)) {
-      pc_candidates <- get("pc_number_candidates", envir = envir, inherits = FALSE)
-      pc_is_valid <- pc_value %in% pc_candidates
-    }
-
-    # 如果还没有生成候选梯度，至少要求PC位于实际PCA维数范围内。
-    if (pc_is_valid && exists("actual_pca_number", envir = envir, inherits = FALSE)) {
-      actual_pc <- get("actual_pca_number", envir = envir, inherits = FALSE)
-      pc_is_valid <- pc_value >= 1L && pc_value <= actual_pc
-    }
-
-    if (pc_is_valid) {
-      parameter_values$final_pc_number <- pc_value
-    } else {
-      parameter_values$final_pc_number <- NULL
-      if (pc_has_value) {
-        message("报错参数缓存中检测到非法final_pc_number，本次不保存该PC值。")
-      }
-    }
-  }
-
-  if ("final_resolution" %in% names(parameter_values)) {
-    resolution_value <- suppressWarnings(
-      as.numeric(parameter_values$final_resolution)
-    )
-    resolution_has_value <- length(resolution_value) == 1L &&
-      !is.na(resolution_value) &&
-      is.finite(resolution_value)
-    resolution_is_valid <- resolution_has_value
-    resolution_match <- integer()
-
-    # 已经设置resolution梯度时，正式resolution必须来自已经绘图的候选值。
-    # 使用小数差值比较，避免0.2这类小数的计算机内部表示误差。
-    if (resolution_is_valid &&
-        exists("resolution_list", envir = envir, inherits = FALSE)) {
-      resolution_candidates <- suppressWarnings(
-        as.numeric(get("resolution_list", envir = envir, inherits = FALSE))
-      )
-      resolution_match <- which(
-        abs(resolution_candidates - resolution_value) < 1e-10
-      )
-      resolution_is_valid <- length(resolution_match) == 1L
-    }
-
-    if (resolution_is_valid) {
-      if (length(resolution_match) == 1L) {
-        parameter_values$final_resolution <-
-          resolution_candidates[resolution_match]
-      } else {
-        parameter_values$final_resolution <- resolution_value
-      }
-    } else {
-      parameter_values$final_resolution <- NULL
-      if (resolution_has_value) {
-        message(
-          "报错参数缓存中检测到非法final_resolution，",
-          "本次不保存该resolution值。"
-        )
-      }
-    }
-  }
-
-  parameter_values
-}
-
 save_error_parameters <- function(envir = .GlobalEnv) {
   parameter_names <- c("final_pc_number", "final_resolution")
   existing_parameters <- parameter_names[
     vapply(parameter_names, exists, logical(1), envir = envir, inherits = FALSE)
   ]
   parameter_values <- mget(existing_parameters, envir = envir, inherits = FALSE)
-  parameter_values <- parameter_values[
-    !vapply(
-      parameter_values,
-      function(x) length(x) == 1L && is.na(x),
-      logical(1)
-    )
-  ]
-  parameter_values <- sanitize_error_parameters(parameter_values, envir = envir)
   saveRDS(
     parameter_values,
     file.path(pipeline_checkpoint_dir, "报错时已选择参数.rds")
@@ -210,13 +128,8 @@ save_error_parameters <- function(envir = .GlobalEnv) {
 restore_error_parameters <- function(envir = .GlobalEnv) {
   parameter_file <- file.path(pipeline_checkpoint_dir, "报错时已选择参数.rds")
   if (file.exists(parameter_file)) {
-    parameter_values <- readRDS(parameter_file)
-    parameter_values <- sanitize_error_parameters(parameter_values, envir = envir)
-    # 将清理后的结果写回缓存，确保旧的非法PC/resolution不会在下次启动时再次出现。
-    saveRDS(parameter_values, parameter_file)
-    if (length(parameter_values) > 0) {
-      list2env(parameter_values, envir = envir)
-    }
+    list2env(readRDS(parameter_file), envir = envir)
   }
   invisible(NULL)
 }
+

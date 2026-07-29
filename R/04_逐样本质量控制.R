@@ -11,9 +11,6 @@
 
 qc_summary <- data.frame()
 mito_summary <- data.frame()
-qc_before_plot_list <- list()
-qc_after_plot_list <- list()
-qc_compare_plot_list <- list()
 
 for (i in seq_along(scRNAlist)) {
   current_sample <- names(scRNAlist)[i]
@@ -116,7 +113,6 @@ for (i in seq_along(scRNAlist)) {
     width = 16,
     height = 4
   )
-  qc_before_plot_list[[current_sample]] <- p.qc.before
 
   cells_before <- ncol(scRNAlist[[i]])
 
@@ -152,8 +148,6 @@ for (i in seq_along(scRNAlist)) {
     width = 16,
     height = 4
   )
-  qc_after_plot_list[[current_sample]] <- p.qc.after
-  qc_compare_plot_list[[current_sample]] <- p.qc.before / p.qc.after
 
   qc_summary <- rbind(
     qc_summary,
@@ -168,37 +162,6 @@ for (i in seq_along(scRNAlist)) {
   )
 }
 
-# 每个样本的QC图已经分别保存。下面再把所有样本合并到总览PDF中，
-# 便于一次性横向查看样本质量差异，而不用逐个打开单独文件。
-if (length(qc_before_plot_list) > 0) {
-  p.qc.before.all <- wrap_plots(qc_before_plot_list, ncol = 1)
-  ggsave(
-    filename = file.path(result_dir, "所有样本_QC过滤前_合并展示.pdf"),
-    plot = p.qc.before.all,
-    width = 16,
-    height = max(4, 4 * length(qc_before_plot_list)),
-    limitsize = FALSE
-  )
-
-  p.qc.after.all <- wrap_plots(qc_after_plot_list, ncol = 1)
-  ggsave(
-    filename = file.path(result_dir, "所有样本_QC过滤后_合并展示.pdf"),
-    plot = p.qc.after.all,
-    width = 16,
-    height = max(4, 4 * length(qc_after_plot_list)),
-    limitsize = FALSE
-  )
-
-  p.qc.compare.all <- wrap_plots(qc_compare_plot_list, ncol = 1)
-  ggsave(
-    filename = file.path(result_dir, "所有样本_QC过滤前后对比_合并展示.pdf"),
-    plot = p.qc.compare.all,
-    width = 16,
-    height = max(8, 8 * length(qc_compare_plot_list)),
-    limitsize = FALSE
-  )
-}
-
 mito_summary
 write.csv(
   mito_summary,
@@ -209,6 +172,7 @@ write.csv(
 qc_summary
 write.csv(qc_summary, file.path(result_dir, "QC汇总表.csv"), row.names = FALSE)
 saveRDS(scRNAlist, file.path(result_dir, "1.逐样本QC后对象列表.rds"))
+
 
 
 

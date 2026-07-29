@@ -5,7 +5,7 @@
 
 required_packages <- c(
   "Seurat", "SeuratObject", "Matrix", "dplyr",
-  "ggplot2", "patchwork", "harmony", "data.table", "openxlsx"
+  "ggplot2", "patchwork", "harmony", "data.table"
 )
 
 missing_packages <- required_packages[
@@ -28,5 +28,5 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(harmony)
   library(data.table)
-  library(openxlsx)
 })
+

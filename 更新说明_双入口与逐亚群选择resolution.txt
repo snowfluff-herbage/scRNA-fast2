@@ -1,0 +1,24 @@
+本版本将正式运行流程整理为两个主入口：
+
+1. 运行_01_入口_至大亚群注释.R
+   从原始数据读取开始，依次完成metadata、逐样本QC、合并、PCA、
+   Harmony、正式聚类、cluster marker和大亚群注释。
+   最终保存result/5.大亚群注释完成_sce.rds后停止。
+
+2. 运行_02_入口_从大亚群注释至小亚群完成.R
+   直接读取大亚群注释完成对象，按sce$celltype逐个大亚群运行
+   NormalizeData、FindVariableFeatures、ScaleData、PCA、Harmony、
+   小亚群聚类、UMAP、marker分析和汇总。
+
+小亚群参数选择规则：
+
+- 每个大亚群独立计算co1和co2。
+- 正式PC自动采用min(co1, co2)，并受最小PC及实际PCA维数约束。
+- 不再询问PC。
+- 聚类算法默认固定为Louvain（algorithm=1）。
+- 每个大亚群分别生成不同resolution_UMAP.pdf和可选clustree。
+- 程序随后逐个大亚群询问正式resolution。
+- 输入非候选值时原地重新询问，不会报错退出或写入错误断点。
+- 直接回车时采用自动评分最高的resolution。
+
+原“仅重新进行大亚群注释”和“小亚群marker点图”脚本保留为辅助脚本。

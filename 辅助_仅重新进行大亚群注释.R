@@ -30,7 +30,7 @@ if (length(command_file) > 0) {
   if (length(source_files) == 0) {
     stop(
       "无法取得入口脚本的位置。请不要选中部分代码逐行运行；",
-      "请打开“运行_02_仅重新进行大亚群注释.R”并点击Source，",
+      "请打开“辅助_仅重新进行大亚群注释.R”并点击Source，",
       "或者使用Rscript运行该文件。"
     )
   }
@@ -70,7 +70,7 @@ clustered_sce_file <- file.path(result_dir, "4.正式聚类后_sce.rds")
 if (!file.exists(clustered_sce_file)) {
   stop(
     "没有找到正式聚类对象：", clustered_sce_file,
-    "。请先运行“运行_01_完整流程.R”。"
+    "。请先运行“运行_01_入口_至大亚群注释.R”。"
   )
 }
 

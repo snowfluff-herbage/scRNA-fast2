@@ -1,0 +1,22 @@
+本版在“小亚群自动Harmony聚类与Marker版”后新增独立的先验marker DotPlot模块。
+
+新增文件：
+1. 运行_04_小亚群marker点图.R
+2. config/05_小亚群marker点图参数.R
+3. R/11_小亚群marker点图函数.R
+
+marker来源：
+1. 用户提供的Fib_markers.xlsx、B_markers.xlsx、PC_markers.xlsx、Mye_markers.xlsx和T_marker_31.xlsx。
+2. 结直肠癌及肿瘤微环境单细胞研究中的常用联合marker。
+
+主要功能：
+1. 自动读取“运行_03”保存的各大亚群独立子对象。
+2. 根据大亚群实际名称自动匹配T/NK、B、Plasma、Myeloid、Fibroblast、Endothelial、Mast和Epithelial面板。
+3. 在subcluster/seurat_clusters水平绘制先验marker DotPlot。
+4. marker较多时自动分页，同时输出多页总PDF、逐页PDF和可选PNG。
+5. 输出DotPlot底层数值、marker存在性检查和每个小亚群marker覆盖率。
+6. 保留用户Excel marker与文献补充marker的来源记录。
+7. 把Fib文件中的内皮亚群拆入Endothelial面板，避免在Fibroblast对象中错误解释。
+8. PC原表中的IGHA3和IGHA4不作为正式人类IgA marker，单独保留在排除条目审计表。
+
+注意：先验marker点图用于辅助cluster注释，不会仅凭单个marker自动强制给cluster命名。

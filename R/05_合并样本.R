@@ -21,44 +21,12 @@ sce@misc$sample_metadata <- sample_info
 rm(scRNAlist)
 
 dim(sce)
-if (!"sample_id" %in% colnames(sce@meta.data)) {
-  stop(
-    "合并后的sce@meta.data中没有sample_id列，无法继续进行样本分组检查。\n",
-    "请检查功能块03中metadata是否成功写入每个Seurat对象。"
-  )
-}
 table(sce$sample_id)
 
 # 显示用户metadata中哪些列已经进入合并后的sce。
 user_metadata_columns <- colnames(sample_info)
 user_metadata_columns
-
-metadata_columns_found <- intersect(user_metadata_columns, colnames(sce@meta.data))
-metadata_columns_missing <- setdiff(user_metadata_columns, colnames(sce@meta.data))
-
-metadata_column_check <- data.frame(
-  metadata_column = user_metadata_columns,
-  in_sce_meta_data = user_metadata_columns %in% colnames(sce@meta.data)
-)
-data.table::fwrite(
-  metadata_column_check,
-  file.path(result_dir, "合并后metadata列检查.csv"),
-  bom = TRUE
-)
-
-if (length(metadata_columns_missing) > 0) {
-  warning(
-    "以下用户metadata列没有在合并后的sce@meta.data中找到，",
-    "本次预览时已跳过这些列：",
-    paste(metadata_columns_missing, collapse = "、"),
-    "\n已经输出检查表：",
-    file.path(result_dir, "合并后metadata列检查.csv")
-  )
-}
-
-if (length(metadata_columns_found) > 0) {
-  head(sce@meta.data[, metadata_columns_found, drop = FALSE])
-}
+head(sce@meta.data[, user_metadata_columns, drop = FALSE])
 
 # group是常用但不是强制列；用户提供时再显示各组细胞数量。
 if ("group" %in% colnames(sce@meta.data)) {
@@ -80,6 +48,7 @@ ggsave(
 )
 
 saveRDS(sce, file.path(result_dir, "2.合并与QC后_sce.rds"))
+
 
 
 

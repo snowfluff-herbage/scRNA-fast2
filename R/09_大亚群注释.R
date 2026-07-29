@@ -119,7 +119,7 @@ if (length(annotation_cluster_list) == 0) {
   stop(
     "marker和经典marker图已经生成，但尚未填写大亚群cluster编号。\n",
     "请修改config/02_大亚群注释参数.R，然后运行",
-    "“运行_02_仅重新进行大亚群注释.R”，不需要重复前面的分析。"
+    "“辅助_仅重新进行大亚群注释.R”，不需要重复前面的分析。"
   )
 }
 
